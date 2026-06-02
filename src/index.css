@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cinzel", Georgia, serif;
+  --font-script: "Alex Brush", cursive;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Premium Color Theme Updates */
+  --color-gold-50: #fbf7ec;
+  --color-gold-100: #f4ea28; /* vivid */
+  --color-gold-400: #dfb257; /* soft gold */
+  --color-gold-500: #d4af37; /* authentic metallic gold */
+  --color-gold-600: #b8901c;
+  --color-gold-700: #937113;
+  --color-gold-800: #6e540e;
+  --color-gold-900: #493709;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: #0c0a09; /* dark elegant background base */
+    color: #f5f5f4;
+  }
+}
+
+/* Custom overlay or scrollbar adjustments */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0a09;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4af37;
+  border-radius: 4px;
+}
+
