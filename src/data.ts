@@ -1,5 +1,10 @@
 import { MenuCategory, EventPackage, Review, ContentEditableDict } from "./types";
 
+import banquetEntrance from "./assets/images/banquet_entrance_1780463071496.png";
+import banquetStage from "./assets/images/banquet_stage_1780463083385.png";
+import banquetBuffet from "./assets/images/banquet_buffet_1780463099512.png";
+import banquetPanipuri from "./assets/images/banquet_panipuri_1780463115114.png";
+
 export const DEFAULT_CONTENT_DICTIONARY: ContentEditableDict = {
   // Navigation Links
   "nav_home": "Home",
@@ -23,6 +28,7 @@ export const DEFAULT_CONTENT_DICTIONARY: ContentEditableDict = {
   "about_story_title": "The Gold Standard of Celebrations",
   "about_story_p1": "Established as a premier luxury venue in the heart of Kathmandu, Kalimati Banquet is designed to turn your dream celebrations into lifelong legacies. From magnificent weddings and grand receptions to executive corporate summits, family gatherings, and birthday celebrations, we deliver world-class hospitality.",
   "about_story_p2": "Spanning modern, fully air-conditioned halls operating with advanced soundproofing and majestic chandeliers, we offer seamless flexibility for gatherings of any size. Led by our dedicated event coordinators, we ensure every detail—from decorative lighting to culinary execution—is handled with precision, making us Kathmandu's favorite choice.",
+  "about_interior_image": banquetEntrance,
   
   // Custom Capacity Specs
   "spec_capacity_num": "50–500",
@@ -351,21 +357,22 @@ export const SERVICES_DATA = [
 ];
 
 export const GALLERY_ITEMS = [
-  // Weddings (using beautiful placeholder images from picsum)
-  { id: "g1", category: "Weddings", url: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800", alt: "Royal Wedding Dinner Setup" },
-  { id: "g2", category: "Weddings", url: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800", alt: "Grand Entrance Walk" },
+  // Weddings (using beautiful local assets reflecting uploaded photos)
+  { id: "g1", category: "Weddings", url: banquetStage, alt: "Luxury 'Happily Ever After' Decorated Wedding Stage" },
+  { id: "g2", category: "Weddings", url: banquetEntrance, alt: "Grand Entrance Welcome Reception Archway" },
   { id: "g3", category: "Weddings", url: "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&q=80&w=800", alt: "Lavish Wedding Florals & Mandap" },
   
   // Corporate
-  { id: "g4", category: "Corporate", url: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=800", alt: "Corporate Gala Seating" },
+  { id: "g4", category: "Corporate", url: banquetBuffet, alt: "Guest Selection from Premium Hot Curries Buffet Counter" },
   { id: "g5", category: "Corporate", url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&q=80&w=800", alt: "Executive Presentation Screen" },
   { id: "g6", category: "Corporate", url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800", alt: "Corporate Seminar & Lights" },
   
   // Celebrations
-  { id: "g7", category: "Celebrations", url: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&q=80&w=800", alt: "Bratabandha Puja Space Detail" },
+  { id: "g7", category: "Celebrations", url: banquetPanipuri, alt: "Interactive Fresh Panipuri Golgappa Festive Catering" },
   { id: "g8", category: "Celebrations", url: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800", alt: "Champagne Glasses Toast" },
   { id: "g9", category: "Celebrations", url: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&q=80&w=800", alt: "Festive Balloons & Birthday Setup" },
 ];
+
 
 export const REVIEWS_DATA_MOCK = [
   {

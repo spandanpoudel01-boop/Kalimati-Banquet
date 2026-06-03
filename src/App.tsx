@@ -51,6 +51,7 @@ import {
   PACKAGE_INCLUSIONS_DETAILED
 } from "./data";
 import { ContentEditableDict } from "./types";
+import banquetStage from "./assets/images/banquet_stage_1780463083385.png";
 
 // Light particle canvas generator 
 function GoldParticles() {
@@ -137,6 +138,236 @@ function GoldParticles() {
   );
 }
 
+interface ImageEditorPanelProps {
+  target: {
+    type: "hero" | "about" | "gallery";
+    itemId?: string;
+    currentUrl: string;
+    alt?: string;
+  };
+  onClose: () => void;
+  content: ContentEditableDict;
+  setContent: React.Dispatch<React.SetStateAction<ContentEditableDict>>;
+  setHeroBg: React.Dispatch<React.SetStateAction<string>>;
+  galleryList: any[];
+  setGalleryList: React.Dispatch<React.SetStateAction<any[]>>;
+  triggerToast: (msg: string) => void;
+}
+
+const ImageEditorPanel = ({
+  target,
+  onClose,
+  content,
+  setContent,
+  setHeroBg,
+  galleryList,
+  setGalleryList,
+  triggerToast
+}: ImageEditorPanelProps) => {
+  const [urlInput, setUrlInput] = useState<string>(target.currentUrl);
+  const [altInput, setAltInput] = useState<string>(target.alt || "");
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Read file and convert to Base64
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      triggerToast("Error: Selected file must be an image.");
+      return;
+    }
+    
+    // limit base64 file size to keep localStorage healthy (e.g. 8MB)
+    if (file.size > 8 * 1024 * 1024) {
+      triggerToast("Warning: File is too large. Please select an image under 8MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        setUrlInput(result);
+        triggerToast("Image file parsed successfully from storage!");
+      }
+    };
+    reader.onerror = () => {
+      triggerToast("Failed to read image file from local device.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleSave = () => {
+    if (!urlInput.trim()) {
+      triggerToast("Error: Image source cannot be empty.");
+      return;
+    }
+
+    if (target.type === "hero") {
+      setHeroBg(urlInput);
+      localStorage.setItem("kb_hero_background_url", urlInput);
+      triggerToast("Hero background image updated! Click 'Save Edits' at the top of the screen to persist text changes.");
+    } else if (target.type === "about") {
+      const nextContent = {
+        ...content,
+        "about_interior_image": urlInput
+      };
+      setContent(nextContent);
+      localStorage.setItem("kb_edited_content", JSON.stringify(nextContent));
+      triggerToast("About interior layout picture has been updated instantly!");
+    } else if (target.type === "gallery") {
+      const updated = galleryList.map(item => {
+        if (item.id === target.itemId) {
+          return {
+            ...item,
+            url: urlInput,
+            alt: altInput || item.alt
+          };
+        }
+        return item;
+      });
+      setGalleryList(updated);
+      localStorage.setItem("kb_gallery_list", JSON.stringify(updated));
+      triggerToast("Gallery image & description updated successfully!");
+    }
+
+    onClose();
+  };
+
+  return (
+    <div className="space-y-5 text-left" id="image-editor-panel-root">
+      {/* Target Asset Label */}
+      <div className="p-3 bg-stone-950/40 rounded-lg border border-stone-850 text-left">
+        <span className="text-[10px] font-mono uppercase text-stone-500 block">Current Target</span>
+        <span className="text-xs font-semibold text-gold-400 capitalize">
+          {target.type === "hero" ? "Hero Banner Image" : target.type === "about" ? "Banquet Spot Showcase" : `Gallery Photo - ${altInput || "No Label"}`}
+        </span>
+      </div>
+
+      {/* Local Storage Image Loader (File drag and drop area) */}
+      <div className="space-y-2 text-left">
+        <label className="text-[11px] font-mono uppercase tracking-wider text-stone-400 font-bold block">
+          Option 1: Add Image File from storage (Device)
+        </label>
+        
+        <div 
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 ${
+            isDragOver 
+              ? "border-gold-400 bg-gold-500/5" 
+              : "border-stone-750 hover:border-gold-500/50 hover:bg-stone-850/50"
+          }`}
+          id="file-drop-zone"
+        >
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={onFileSelect} 
+            accept="image/*" 
+            className="hidden" 
+          />
+          <Upload className={`h-8 w-8 transition-transform ${isDragOver ? "scale-110 text-gold-400 animate-bounce" : "text-stone-400"}`} />
+          <div>
+            <p className="text-xs font-bold text-stone-200">Drag & drop your file here, or click to browse</p>
+            <p className="text-[10px] text-stone-500 mt-1">Supports PNG, JPG, JPEG, WEBP etc. up to 8MB</p>
+          </div>
+        </div>
+      </div>
+
+      {/* External URL string */}
+      <div className="space-y-2 text-left">
+        <label className="text-[11px] font-mono uppercase tracking-wider text-stone-400 font-bold block">
+          Option 2: Use Online Image URL directly
+        </label>
+        <input 
+          type="text"
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
+          placeholder="https://images.unsplash.com/your-image-url..."
+          className="w-full bg-stone-950 border border-stone-800 text-stone-100 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-gold-400 placeholder-stone-600 transition-colors"
+          id="image-url-input-field"
+        />
+      </div>
+
+      {/* For gallery layout, allow custom short descriptions */}
+      {target.type === "gallery" && (
+        <div className="space-y-2 text-left">
+          <label className="text-[11px] font-mono uppercase tracking-wider text-stone-400 font-bold block">
+            Gallery Photo Alt Label Description
+          </label>
+          <input 
+            type="text"
+            value={altInput}
+            onChange={(e) => setAltInput(e.target.value)}
+            placeholder="e.g. Traditional Wedding Stage Setup"
+            className="w-full bg-stone-950 border border-stone-800 text-stone-100 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-gold-400 placeholder-stone-600 transition-colors"
+            id="image-alt-input-field"
+          />
+        </div>
+      )}
+
+      {/* Asset Preview */}
+      {urlInput && (
+        <div className="space-y-2 text-left">
+          <span className="text-[10px] font-mono uppercase text-stone-500 block">Visual Asset Preview</span>
+          <div className="rounded-xl border border-stone-800 overflow-hidden bg-stone-950 flex items-center justify-center max-h-[160px] p-2">
+            <img 
+              src={urlInput} 
+              alt="Asset preview" 
+              className="max-h-[140px] object-contain max-w-full rounded-md"
+              onError={() => triggerToast("Warning: Preview failed to render. Please make sure the link or file data is correct.")}
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Button Row */}
+      <div className="flex gap-3 justify-end pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2.5 bg-stone-800 hover:bg-stone-750 text-stone-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="px-6 py-2.5 bg-gold-500 hover:bg-gold-400 text-stone-950 font-bold rounded-xl text-xs uppercase tracking-widest transition-colors cursor-pointer shadow-md shadow-gold-500/10"
+        >
+          Update Image
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   // --- Admin Panel States ---
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
@@ -176,6 +407,12 @@ export default function App() {
   const [galleryList, setGalleryList] = useState<any[]>([]);
   const [menuStructure, setMenuStructure] = useState<any[]>([]);
   const [openedPackage, setOpenedPackage] = useState<string | null>(null);
+  const [imageEditTarget, setImageEditTarget] = useState<{
+    type: "hero" | "about" | "gallery";
+    itemId?: string;
+    currentUrl: string;
+    alt?: string;
+  } | null>(null);
 
   // --- UI Layout States ---
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
@@ -228,8 +465,8 @@ export default function App() {
     if (bg) {
       setHeroBg(bg);
     } else {
-      // Elegant default premium Unsplash image
-      setHeroBg("https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1920");
+      // Elegant default premium replica image of the Happily Ever After stage
+      setHeroBg(banquetStage);
     }
 
     // 4. Load dynamic gallery list
@@ -902,18 +1139,17 @@ ${bookingForm.fullName}`;
         {isAdminEditMode && (
           <div 
             onClick={() => {
-              const newUrl = prompt("Enter new image URL for the Hero Background:", heroBg);
-              if (newUrl) {
-                setHeroBg(newUrl);
-                localStorage.setItem("kb_hero_background_url", newUrl);
-                triggerToast("Hero background URL updated! Remember to click 'Save Edits' at the top of the screen to persist text changes.");
-              }
+              setImageEditTarget({
+                type: "hero",
+                currentUrl: heroBg,
+                alt: "Hero Main Background Picture"
+              });
             }}
             className="absolute top-24 right-6 md:right-12 z-30 bg-stone-900/95 hover:bg-gold-500 hover:text-stone-950 border border-gold-500/40 text-gold-400 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-2xl transition-all hover:scale-[1.03]"
             title="Click to change Hero background picture"
           >
             <Edit className="h-4 w-4" />
-            Edit Background Image URL
+            Edit Background Image from Storage
           </div>
         )}
 
@@ -1045,12 +1281,11 @@ ${bookingForm.fullName}`;
                   referrerPolicy="no-referrer"
                   onClick={() => {
                     if (isAdminEditMode) {
-                      const current = content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700";
-                      const newUrl = prompt("Enter new image URL for About layout illustration:", current);
-                      if (newUrl) {
-                        updateContentKey("about_interior_image", newUrl);
-                        triggerToast("About interior layout picture has been updated instantly!");
-                      }
+                      setImageEditTarget({
+                        type: "about",
+                        currentUrl: content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700",
+                        alt: "About Section Featured Image"
+                      });
                     }
                   }}
                 />
@@ -1059,12 +1294,11 @@ ${bookingForm.fullName}`;
                 {isAdminEditMode && (
                   <div 
                     onClick={() => {
-                      const current = content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700";
-                      const newUrl = prompt("Enter new image URL for About layout illustration:", current);
-                      if (newUrl) {
-                        updateContentKey("about_interior_image", newUrl);
-                        triggerToast("About interior layout picture has been updated instantly!");
-                      }
+                      setImageEditTarget({
+                        type: "about",
+                        currentUrl: content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700",
+                        alt: "About Section Featured Image"
+                      });
                     }}
                     className="absolute inset-0 bg-stone-950/75 hover:bg-stone-950/65 z-20 flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-all"
                   >
@@ -1515,15 +1749,12 @@ ${bookingForm.fullName}`;
                 key={item.id}
                 onClick={() => {
                   if (isAdminEditMode) {
-                    const newUrl = prompt(`Enter new image URL for Gallery item "${item.alt}":`, item.url);
-                    if (newUrl === null) return; // cancel
-                    const newAlt = prompt(`Enter new brief label/alt description for this photo:`, item.alt);
-                    if (newAlt === null) return; // cancel
-                    
-                    const updated = galleryList.map(g => g.id === item.id ? { ...g, url: newUrl, alt: newAlt } : g);
-                    setGalleryList(updated);
-                    localStorage.setItem("kb_gallery_list", JSON.stringify(updated));
-                    triggerToast("Gallery image updated successfully!");
+                    setImageEditTarget({
+                      type: "gallery",
+                      itemId: item.id,
+                      currentUrl: item.url,
+                      alt: item.alt
+                    });
                   } else {
                     setSelectedLightboxImage(galleryList.indexOf(item));
                   }
@@ -2306,6 +2537,56 @@ ${bookingForm.fullName}`;
                   <span>Authorized use only. Actions on this control hub are registered in local session hashes.</span>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* 📷 INTERACTIVE INTEGRATED IMAGE EDITOR MODAL */}
+        {imageEditTarget && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setImageEditTarget(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-stone-900 border border-gold-400 p-6 md:p-8 rounded-xl max-w-lg w-full relative shadow-2xl overflow-hidden my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-gold-600 via-yellow-400 to-gold-400" />
+              
+              <button 
+                onClick={() => setImageEditTarget(null)}
+                className="absolute top-4 right-4 text-stone-400 hover:text-white transition-colors p-1.5 hover:bg-stone-800 rounded-full cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="mb-5 text-left">
+                <h3 className="font-serif font-bold text-lg text-white flex items-center gap-2">
+                  <Edit className="h-5 w-5 text-gold-400" />
+                  Edit & Change Photo
+                </h3>
+                <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">
+                  Change image source using web link or local storage files
+                </p>
+              </div>
+
+              {/* Interactive editor payload */}
+              <ImageEditorPanel 
+                target={imageEditTarget} 
+                onClose={() => setImageEditTarget(null)}
+                content={content}
+                setContent={setContent}
+                setHeroBg={setHeroBg}
+                galleryList={galleryList}
+                setGalleryList={setGalleryList}
+                triggerToast={triggerToast}
+              />
             </motion.div>
           </motion.div>
         )}
