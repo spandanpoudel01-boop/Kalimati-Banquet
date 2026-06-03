@@ -31,6 +31,7 @@ import {
   Video,
   Plus,
   Trash2,
+  Eye,
   Settings as SettingsIcon,
   BarChart,
   CheckCircle,
@@ -46,7 +47,8 @@ import {
   PACKAGES_DATA, 
   SERVICES_DATA, 
   GALLERY_ITEMS, 
-  REVIEWS_DATA_MOCK 
+  REVIEWS_DATA_MOCK,
+  PACKAGE_INCLUSIONS_DETAILED
 } from "./data";
 import { ContentEditableDict } from "./types";
 
@@ -170,6 +172,11 @@ export default function App() {
   const [copyrightClicks, setCopyrightClicks] = useState<number>(0);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
 
+  // Dynamic and editable records states
+  const [galleryList, setGalleryList] = useState<any[]>([]);
+  const [menuStructure, setMenuStructure] = useState<any[]>([]);
+  const [openedPackage, setOpenedPackage] = useState<string | null>(null);
+
   // --- UI Layout States ---
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [activeMenuTab, setActiveMenuTab] = useState<string>("veg_starter");
@@ -225,7 +232,31 @@ export default function App() {
       setHeroBg("https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1920");
     }
 
-    // 4. Load bookings inquiry logs
+    // 4. Load dynamic gallery list
+    const storedGallery = localStorage.getItem("kb_gallery_list");
+    if (storedGallery) {
+      try {
+        setGalleryList(JSON.parse(storedGallery));
+      } catch (e) {
+        setGalleryList([...GALLERY_ITEMS]);
+      }
+    } else {
+      setGalleryList([...GALLERY_ITEMS]);
+    }
+
+    // 5. Load dynamic menu structure
+    const storedMenu = localStorage.getItem("kb_menu_structure");
+    if (storedMenu) {
+      try {
+        setMenuStructure(JSON.parse(storedMenu));
+      } catch (e) {
+        setMenuStructure([...MENU_STRUCTURE]);
+      }
+    } else {
+      setMenuStructure([...MENU_STRUCTURE]);
+    }
+
+    // 6. Load bookings inquiry logs
     const storedBookings = localStorage.getItem("kb_bookings");
     if (storedBookings) {
       try {
@@ -416,13 +447,77 @@ export default function App() {
     triggerToast("Success! All text modifications have been permanently saved in browser localStorage.");
   };
 
+  // Add a new row to an existing banquet menu category definition
+  const handleAddNewMenuRow = (catId: string) => {
+    const dishName = prompt("Enter new dish name:");
+    if (!dishName) return;
+    const dishPrice = prompt(`Enter price of "${dishName}" in NPR (₨):`, "350");
+    if (dishPrice === null) return;
+    
+    const currentMenu = menuStructure.length > 0 ? menuStructure : MENU_STRUCTURE;
+    const itemId = `item_${Date.now()}`;
+    const nameKey = `menu_${catId}_${itemId}_name`;
+    const priceKey = `menu_${catId}_${itemId}_price`;
+    
+    // Update local config dictionary in active state
+    setContent(prev => ({
+      ...prev,
+      [nameKey]: dishName,
+      [priceKey]: dishPrice
+    }));
+    
+    const updatedMenu = currentMenu.map(cat => {
+      if (cat.id === catId) {
+        return {
+          ...cat,
+          items: [...cat.items, { id: itemId, keyName: nameKey, keyPrice: priceKey }]
+        };
+      }
+      return cat;
+    });
+    
+    setMenuStructure(updatedMenu);
+    localStorage.setItem("kb_menu_structure", JSON.stringify(updatedMenu));
+    localStorage.setItem("kb_edited_content", JSON.stringify({
+      ...content,
+      [nameKey]: dishName,
+      [priceKey]: dishPrice
+    }));
+    
+    triggerToast(`Successfully added "${dishName}" to menu category!`);
+  };
+
+  // Delete a specific row from a menu category
+  const handleDeleteMenuRow = (catId: string, itemId: string, nameVal: string) => {
+    if (confirm(`Are you sure you want to permanently delete "${nameVal || "this dish"}" from the menu category?`)) {
+      const currentMenu = menuStructure.length > 0 ? menuStructure : MENU_STRUCTURE;
+      const updatedMenu = currentMenu.map(cat => {
+        if (cat.id === catId) {
+          return {
+            ...cat,
+            items: cat.items.filter(item => item.id !== itemId)
+          };
+        }
+        return cat;
+      });
+      
+      setMenuStructure(updatedMenu);
+      localStorage.setItem("kb_menu_structure", JSON.stringify(updatedMenu));
+      triggerToast("Permanently removed menu item row from active configurations.");
+    }
+  };
+
   // Clear edits and reset everything
   const handleResetToDefault = () => {
     if (confirm("Are you sure you want to reset all customized contents to factory default? Any edits will be discarded.")) {
       localStorage.removeItem("kb_edited_content");
       localStorage.removeItem("kb_hero_background_url");
+      localStorage.removeItem("kb_gallery_list");
+      localStorage.removeItem("kb_menu_structure");
       setContent({ ...DEFAULT_CONTENT_DICTIONARY });
       setHeroBg("https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1920");
+      setGalleryList([...GALLERY_ITEMS]);
+      setMenuStructure([...MENU_STRUCTURE]);
       setIsAdminEditMode(false);
       triggerToast("Application has been successfully reset to master default configuration.");
       setTimeout(() => {
@@ -563,8 +658,8 @@ ${bookingForm.fullName}`;
 
   // Image Filter logic
   const filteredGallery = galleryFilter === "All Photos" 
-    ? GALLERY_ITEMS 
-    : GALLERY_ITEMS.filter(item => item.category === galleryFilter);
+    ? galleryList 
+    : galleryList.filter(item => item.category === galleryFilter);
 
   return (
     <div className="relative font-sans text-stone-100 bg-stone-950 overflow-x-hidden min-h-screen">
@@ -803,6 +898,25 @@ ${bookingForm.fullName}`;
         <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/80 to-stone-950/50 z-0" />
         <div className="absolute inset-0 bg-radial-gradient-vignette opacity-70 z-0" />
 
+        {/* Floating Edit Button Overlay for Hero Image */}
+        {isAdminEditMode && (
+          <div 
+            onClick={() => {
+              const newUrl = prompt("Enter new image URL for the Hero Background:", heroBg);
+              if (newUrl) {
+                setHeroBg(newUrl);
+                localStorage.setItem("kb_hero_background_url", newUrl);
+                triggerToast("Hero background URL updated! Remember to click 'Save Edits' at the top of the screen to persist text changes.");
+              }
+            }}
+            className="absolute top-24 right-6 md:right-12 z-30 bg-stone-900/95 hover:bg-gold-500 hover:text-stone-950 border border-gold-500/40 text-gold-400 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-2xl transition-all hover:scale-[1.03]"
+            title="Click to change Hero background picture"
+          >
+            <Edit className="h-4 w-4" />
+            Edit Background Image URL
+          </div>
+        )}
+
         {/* Live shimmering particles canvas background */}
         <GoldParticles />
 
@@ -925,11 +1039,44 @@ ${bookingForm.fullName}`;
               <div className="relative group overflow-hidden rounded-2xl border border-gold-500/10 shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent z-10" />
                 <img 
-                  src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700" 
+                  src={content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700"} 
                   alt="Kalimati Banquet Interior layout" 
-                  className="w-full object-cover aspect-[4/5] object-center group-hover:scale-105 transition-transform duration-700"
+                  className={`w-full object-cover aspect-[4/5] object-center transition-transform duration-700 ${isAdminEditMode ? "border-2 border-dashed border-gold-500/50 cursor-pointer" : "group-hover:scale-105"}`}
                   referrerPolicy="no-referrer"
+                  onClick={() => {
+                    if (isAdminEditMode) {
+                      const current = content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700";
+                      const newUrl = prompt("Enter new image URL for About layout illustration:", current);
+                      if (newUrl) {
+                        updateContentKey("about_interior_image", newUrl);
+                        triggerToast("About interior layout picture has been updated instantly!");
+                      }
+                    }
+                  }}
                 />
+
+                {/* Clear Edit Mode Helper Overlay for Image Change */}
+                {isAdminEditMode && (
+                  <div 
+                    onClick={() => {
+                      const current = content["about_interior_image"] || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=700";
+                      const newUrl = prompt("Enter new image URL for About layout illustration:", current);
+                      if (newUrl) {
+                        updateContentKey("about_interior_image", newUrl);
+                        triggerToast("About interior layout picture has been updated instantly!");
+                      }
+                    }}
+                    className="absolute inset-0 bg-stone-950/75 hover:bg-stone-950/65 z-20 flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-all"
+                  >
+                    <Edit className="h-6 w-6 text-gold-400 mb-2 animate-bounce" />
+                    <span className="text-sm font-serif font-bold text-gold-400 uppercase tracking-wide">
+                      Click to Change Picture
+                    </span>
+                    <span className="text-[10px] text-stone-400 font-mono mt-1">
+                      (NPR Banquets Master Graphic Layout)
+                    </span>
+                  </div>
+                )}
                 
                 {/* Floating highlight card on top of image */}
                 <div className="absolute bottom-6 left-6 right-6 z-20 bg-stone-900/95 border border-gold-500/20 p-5 rounded-xl backdrop-blur">
@@ -1092,7 +1239,7 @@ ${bookingForm.fullName}`;
                   transition={{ duration: 0.25 }}
                   className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
                 >
-                  {MENU_STRUCTURE.find(c => c.id === activeMenuTab)?.items.map((item) => (
+                  {((menuStructure && menuStructure.length > 0) ? menuStructure : MENU_STRUCTURE).find(c => c.id === activeMenuTab)?.items.map((item) => (
                     <div 
                       key={item.id}
                       className="flex items-end justify-between gap-4 p-4 rounded-lg bg-stone-900/30 border border-stone-850/60 hover:bg-stone-900/65 group transition-colors"
@@ -1114,19 +1261,20 @@ ${bookingForm.fullName}`;
                   ))}
                 </motion.div>
               ) : (
-                /* Packages Tiers Cards Layout */
                 <motion.div
                   key="packages"
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
                   transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn"
                 >
                   {PACKAGES_DATA.map((pkg) => (
                     <div 
                       key={pkg.id}
-                      className={`relative rounded-2xl p-8 bg-gradient-to-b ${pkg.gradient} border-[1px] border-stone-800 transition-all hover:-translate-y-2 flex flex-col justify-between`}
+                      onClick={() => setOpenedPackage(pkg.id)}
+                      className={`relative rounded-2xl p-8 bg-gradient-to-b ${pkg.gradient} border-[1px] border-stone-800 hover:border-gold-500/40 transition-all hover:-translate-y-2 flex flex-col justify-between cursor-pointer group active:scale-[0.99]`}
+                      title="Click directly to open detailed lists of inclusions!"
                     >
                       {/* Popular ribbon for Gold tier */}
                       {pkg.id === "pkg_gold" && (
@@ -1140,9 +1288,16 @@ ${bookingForm.fullName}`;
                           <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded font-black ${pkg.badgeColor}`}>
                             {pkg.id === "pkg_silver" ? "Silver" : pkg.id === "pkg_gold" ? "Gold Royal" : "Diamond Supreme"}
                           </span>
+                          
+                          {/* Eye action button cue */}
+                          <div
+                            className="text-[10px] font-mono tracking-wider font-bold text-stone-400 group-hover:text-gold-400 flex items-center gap-1 transition-colors"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Check Inclusions
+                          </div>
                         </div>
 
-                        <h3 className="font-serif font-bold text-xl text-white">
+                        <h3 className="font-serif font-bold text-xl text-white group-hover:text-gold-300 transition-colors">
                           <EditableText idKey={pkg.keyName} />
                         </h3>
 
@@ -1177,24 +1332,33 @@ ${bookingForm.fullName}`;
                           <span>Free private backstage vanity setups</span>
                         </div>
                         <div className="flex items-center gap-2.5 text-xs text-stone-300">
-                          <Check className="h-4 w-4 text-gold-500 shrink-0" />
-                          <span>Dedicated professional coordinator</span>
+                          <span className="text-gold-400 font-mono tracking-wider text-[10px] font-bold underline cursor-pointer">
+                            Click card to open +9 more inclusions
+                          </span>
                         </div>
                       </div>
 
-                      <a
-                        href="#booking"
-                        onClick={() => {
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setBookingForm(prev => ({ ...prev, selectedPackage: pkg.id }));
+                          const target = document.getElementById("booking");
+                          if (target) {
+                            window.scrollTo({
+                              top: target.offsetTop - 80,
+                              behavior: "smooth"
+                            });
+                          }
+                          triggerToast(`Selected ${pkg.id === "pkg_silver" ? "Silver" : pkg.id === "pkg_gold" ? "Gold" : "Diamond"} Package! Ready for inquiry.`);
                         }}
-                        className={`block text-center py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                        className={`block w-full text-center py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all cursor-pointer ${
                           pkg.id === "pkg_gold"
                             ? "bg-gold-500 hover:bg-gold-400 text-stone-950 shadow-md transform hover:scale-[1.02]"
                             : "bg-stone-800 hover:bg-stone-700 text-stone-200"
                         }`}
                       >
                         Inquire Package
-                      </a>
+                      </button>
                     </div>
                   ))}
                 </motion.div>
@@ -1202,6 +1366,106 @@ ${bookingForm.fullName}`;
             </AnimatePresence>
           </div>
         </div>
+
+        {/* Dynamic Package Detailed Inclusions Overlay Modal */}
+        <AnimatePresence>
+          {openedPackage && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-md"
+              onClick={() => setOpenedPackage(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                transition={{ type: "spring", duration: 0.4 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-stone-900 border border-gold-500/25 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative"
+              >
+                {/* Gold ambient shimmer strip */}
+                <div className="h-1.5 w-full bg-gradient-to-r from-gold-600 via-yellow-500 to-gold-400" />
+                
+                {/* Close Button */}
+                <button 
+                  onClick={() => setOpenedPackage(null)}
+                  className="absolute top-4 right-4 p-2 text-stone-400 hover:text-white hover:bg-stone-850 rounded-full transition-all cursor-pointer z-35"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+
+                {/* Modal Header */}
+                <div className="p-6 md:p-8 border-b border-stone-850 bg-stone-900/50">
+                  <span className="text-[10px] uppercase font-mono tracking-widest bg-gold-950/40 border border-gold-500/20 text-gold-400 px-3 py-1 rounded-full font-black">
+                    {openedPackage === "pkg_silver" ? "Silver Tier Package" : openedPackage === "pkg_gold" ? "Gold Royal Banquet" : "Diamond Supreme"}
+                  </span>
+                  <h3 className="font-serif text-2xl md:text-3.5xl text-white font-bold tracking-tight mt-3">
+                    <EditableText idKey={PACKAGES_DATA.find(p => p.id === openedPackage)?.keyName || ""} />
+                  </h3>
+                  <div className="flex items-baseline gap-2 mt-2 text-gold-400 font-bold">
+                    <span className="text-sm font-serif font-medium">Rate: NPR</span>
+                    <span className="font-mono text-xl md:text-2xl font-black">
+                      <EditableText idKey={PACKAGES_DATA.find(p => p.id === openedPackage)?.keyPrice || ""} />
+                    </span>
+                    <span className="text-[10px] font-mono text-stone-500 uppercase font-bold">(Exclusively Inclusive)</span>
+                  </div>
+                </div>
+
+                {/* Main Content Area: List view of inclusions */}
+                <div className="p-6 md:p-8 max-h-[50vh] overflow-y-auto space-y-4 bg-stone-950/30">
+                  <p className="text-stone-400 text-xs font-mono uppercase tracking-wider font-semibold border-b border-stone-850 pb-2 text-left">
+                    Master Inclusions Checklist ({PACKAGE_INCLUSIONS_DETAILED[openedPackage as keyof typeof PACKAGE_INCLUSIONS_DETAILED]?.length || 0} features)
+                  </p>
+                  
+                  <div className="space-y-3.5">
+                    {PACKAGE_INCLUSIONS_DETAILED[openedPackage as keyof typeof PACKAGE_INCLUSIONS_DETAILED]?.map((inc, i) => (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        key={i} 
+                        className="flex items-start gap-3 p-3 bg-stone-900/40 rounded-xl border border-stone-850/40 hover:border-gold-500/10 transition-colors"
+                      >
+                        <Check className="h-4 w-4 text-gold-400 shrink-0 mt-0.5 bg-gold-950/50 p-0.5 rounded border border-gold-500/20" />
+                        <span className="text-stone-200 text-xs md:text-sm font-sans leading-relaxed text-left">{inc}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Modal Footer actions */}
+                <div className="p-6 bg-stone-900 border-t border-stone-850/60 flex flex-col sm:flex-row gap-3 justify-end">
+                  <button 
+                    onClick={() => setOpenedPackage(null)}
+                    className="px-4 py-2.5 bg-stone-800 hover:bg-stone-750 text-stone-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Close Window
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const selPkg = openedPackage;
+                      setOpenedPackage(null);
+                      setBookingForm(prev => ({ ...prev, selectedPackage: selPkg }));
+                      const target = document.getElementById("booking");
+                      if (target) {
+                        window.scrollTo({
+                          top: target.offsetTop - 80,
+                          behavior: "smooth"
+                        });
+                      }
+                      triggerToast(`Selected ${selPkg === "pkg_silver" ? "Silver" : selPkg === "pkg_gold" ? "Gold" : "Diamond"} Package! Form inquiry activated.`);
+                    }}
+                    className="px-6 py-2.5 bg-gold-500 hover:bg-gold-400 text-stone-950 font-bold rounded-lg text-xs uppercase tracking-widest transition-colors cursor-pointer shadow-md shadow-gold-500/10"
+                  >
+                    Select & Plan Reservation
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
 
@@ -1249,11 +1513,34 @@ ${bookingForm.fullName}`;
             {filteredGallery.map((item, index) => (
               <div 
                 key={item.id}
-                onClick={() => setSelectedLightboxImage(GALLERY_ITEMS.indexOf(item))}
+                onClick={() => {
+                  if (isAdminEditMode) {
+                    const newUrl = prompt(`Enter new image URL for Gallery item "${item.alt}":`, item.url);
+                    if (newUrl === null) return; // cancel
+                    const newAlt = prompt(`Enter new brief label/alt description for this photo:`, item.alt);
+                    if (newAlt === null) return; // cancel
+                    
+                    const updated = galleryList.map(g => g.id === item.id ? { ...g, url: newUrl, alt: newAlt } : g);
+                    setGalleryList(updated);
+                    localStorage.setItem("kb_gallery_list", JSON.stringify(updated));
+                    triggerToast("Gallery image updated successfully!");
+                  } else {
+                    setSelectedLightboxImage(galleryList.indexOf(item));
+                  }
+                }}
                 className="break-inside-avoid relative overflow-hidden rounded-xl border border-stone-800 group cursor-pointer shadow-lg"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-transparent to-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex flex-col justify-end p-5" />
                 
+                {/* Admin Mode Overlay Hint */}
+                {isAdminEditMode && (
+                  <div className="absolute inset-0 bg-stone-950/80 z-30 flex flex-col items-center justify-center p-3 text-center border border-dashed border-gold-500/40 rounded-xl">
+                    <Edit className="h-5 w-5 text-gold-400 mb-1" />
+                    <span className="text-[10px] font-bold text-gold-400 uppercase tracking-widest font-mono">Click to Edit Photo</span>
+                    <span className="text-[9px] text-stone-500 truncate max-w-full px-1">{item.alt}</span>
+                  </div>
+                )}
+
                 {/* Visual Label overlays inside and reveals on hover */}
                 <div className="absolute bottom-4 left-4 z-20 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                   <span className="text-[9px] uppercase font-mono tracking-widest bg-gold-500 text-stone-950 px-2 py-0.5 rounded font-black">
@@ -1275,7 +1562,7 @@ ${bookingForm.fullName}`;
 
         {/* Breathtaking Lightbox Overlay Portal */}
         <AnimatePresence>
-          {selectedLightboxImage !== null && (
+          {selectedLightboxImage !== null && selectedLightboxImage < galleryList.length && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1300,7 +1587,7 @@ ${bookingForm.fullName}`;
                     e.stopPropagation();
                     setSelectedLightboxImage(prev => {
                       if (prev === null) return null;
-                      return prev === 0 ? GALLERY_ITEMS.length - 1 : prev - 1;
+                      return prev === 0 ? galleryList.length - 1 : prev - 1;
                     });
                   }}
                   className="absolute left-4 p-3 rounded-full bg-stone-900/60 hover:bg-stone-900 text-white cursor-pointer transition-colors"
@@ -1309,8 +1596,8 @@ ${bookingForm.fullName}`;
                 </button>
 
                 <img 
-                  src={GALLERY_ITEMS[selectedLightboxImage].url} 
-                  alt={GALLERY_ITEMS[selectedLightboxImage].alt}
+                  src={galleryList[selectedLightboxImage].url} 
+                  alt={galleryList[selectedLightboxImage].alt}
                   onClick={(e) => e.stopPropagation()}
                   className="max-w-full max-h-[75vh] object-contain rounded-lg border border-stone-800 shadow-2xl"
                   referrerPolicy="no-referrer"
@@ -1322,7 +1609,7 @@ ${bookingForm.fullName}`;
                     e.stopPropagation();
                     setSelectedLightboxImage(next => {
                       if (next === null) return null;
-                      return next === GALLERY_ITEMS.length - 1 ? 0 : next + 1;
+                      return next === galleryList.length - 1 ? 0 : next + 1;
                     });
                   }}
                   className="absolute right-4 p-3 rounded-full bg-stone-900/60 hover:bg-stone-900 text-white cursor-pointer transition-colors"
@@ -1337,13 +1624,13 @@ ${bookingForm.fullName}`;
                 onClick={(e) => e.stopPropagation()}
               >
                 <span className="text-[10px] uppercase font-mono tracking-widest bg-gold-500 text-stone-950 px-2.5 py-0.5 rounded font-black">
-                  {GALLERY_ITEMS[selectedLightboxImage].category}
+                  {galleryList[selectedLightboxImage].category}
                 </span>
                 <p className="text-white text-base font-serif font-bold mt-2">
-                  {GALLERY_ITEMS[selectedLightboxImage].alt}
+                  {galleryList[selectedLightboxImage].alt}
                 </p>
                 <p className="text-xs text-stone-400 mt-1">
-                  Photo {selectedLightboxImage + 1} of {GALLERY_ITEMS.length}
+                  Photo {selectedLightboxImage + 1} of {galleryList.length}
                 </p>
               </div>
             </motion.div>
@@ -2637,12 +2924,23 @@ ${bookingForm.fullName}`;
                         <span>This configuration page offers an executive shortcut panel. Changing prices and names here will instantly rewrite respective values in the master configuration list below, automatically updating public visitors' menu pages in real-time. Click "Save Edits" on the top of the screen to lock modifications permanently.</span>
                       </div>
 
-                      {MENU_STRUCTURE.map((cat) => (
+                      {((menuStructure && menuStructure.length > 0) ? menuStructure : MENU_STRUCTURE).map((cat) => (
                         <div key={cat.id} className="bg-stone-950 p-5 rounded-xl border border-stone-850 space-y-4">
-                          <h4 className="font-serif font-semibold text-gold-400 tracking-wide text-xs uppercase flex items-center gap-1.5 border-b border-stone-900 pb-2">
-                            <Utensils className="h-4 w-4 text-gold-500" />
-                            {cat.category} Category
-                          </h4>
+                          <div className="flex justify-between items-center gap-4 border-b border-stone-900 pb-2">
+                            <h4 className="font-serif font-semibold text-gold-400 tracking-wide text-xs uppercase flex items-center gap-1.5">
+                              <Utensils className="h-4 w-4 text-gold-500" />
+                              {cat.category} Category
+                            </h4>
+                            
+                            {/* Dynamically insert new dish row button */}
+                            <button
+                              onClick={() => handleAddNewMenuRow(cat.id)}
+                              className="px-3 py-1 bg-gold-950/40 hover:bg-gold-500 hover:text-stone-950 border border-gold-500/30 text-gold-400 rounded text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-md hover:scale-[1.02]"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add Dish Row
+                            </button>
+                          </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {cat.items.map((item) => {
@@ -2676,6 +2974,15 @@ ${bookingForm.fullName}`;
                                       />
                                     </div>
                                   </div>
+
+                                  {/* Delete Action Trigger Button */}
+                                  <button
+                                    onClick={() => handleDeleteMenuRow(cat.id, item.id, nameVal)}
+                                    className="p-1.5 self-end text-stone-500 hover:text-red-500 hover:bg-stone-950 border border-transparent hover:border-red-500/20 rounded transition-all cursor-pointer mt-4"
+                                    title={`Delete item "${nameVal}"`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
 
                                 </div>
                               );

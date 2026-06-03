@@ -404,3 +404,39 @@ export const REVIEWS_DATA_MOCK = [
     date: "3 days ago"
   }
 ];
+
+export const PACKAGE_INCLUSIONS_DETAILED = {
+  "pkg_silver": [
+    "Full Buffet Catering Service (1 Hot Soup, 2 Vegetarian Mains, 1 Rice, 1 Daal, 1 Noodle, 1 Sweet Dessert, with Salads & Traditional Pickles)",
+    "Elegant Stage Decor (Sophisticated drapery, warm LED spotlights, and premium artificial flower arrangements)",
+    "High-Fidelity Audio System (Fully synchronized speakers + 2 professional wireless microphones)",
+    "Air-Conditioned Grand Banquet Hall (Fully active for up to 4 continuous hours of event)",
+    "Backstage Green Room (1 private dressing room with direct access to the main stage)",
+    "On-Site Event Operations Lead (Ensuring seamless timing, safety, and coordinator logistics)",
+    "Free Secure Compound Parking (Ample capacity for up to 50 cars with round-the-clock security)"
+  ],
+  "pkg_gold": [
+    "Royal Multi-Cuisine Buffet (2 Soups, 2 Gourmet Hot Starters, 3 Main Dishes (includes non-veg options), 2 Rice varieties, Fresh Handcrafted Roti & Naan, 2 Desserts, Seasonal Salads)",
+    "Premium Floral Stage & Walkway Design (Lush local fresh flowers, royal carpeted runway, and coordinated drapes)",
+    "High-Definition AV System (Twin projector setups + full HD screen displaying event presentations & slideshows)",
+    "Atmospheric Concert Lighting (Intelligent moving head spotlights, LED color washes, and warm ambient uplights)",
+    "VIP Vanity Suites (1 executive backstage dressing room featuring vanity mirrors, private lounge, and refreshments)",
+    "Senior Event Planning Supervisor (Active pre-event planning checklist & live step-by-step coordination)",
+    "Complimentary Welcome Drink (2 choices of artisanal fruit mocktails served upon guest arrival)",
+    "Full Professional Valet Parking (Smooth arrival and departure management with dedicated valet drivers)",
+    "Bypass VIP Entrance & Welcome Area (Custom signage, floral arches, and guest registration desk setup)"
+  ],
+  "pkg_diamond": [
+    "Imperial Royal Feast (3 Specialty Soups, 4 Hot Premium Starters, 4 Main Course Masterpieces, Live Jalebi & Rabdi counters, Assorted Tandoori Breads, 3 Premium Desserts, Fruit Carpaccio, and Gourmet Dips)",
+    "Extravagant Signature Floral Architecture (Fresh premium lilies, roses, and orchids across halls, stages, and tables)",
+    "Cinematic Audio Experience & Live Concert Setup (High-output line arrays + professional mixer + live performance coordination)",
+    "Full Stage Lighting Production Series (DMX moving beams, coordinate washes, low fog cloud machines, and cold pyro sparks effects)",
+    "Ultra-Luxury Master VIP Dressing Lounge (Full sofa setups, premium cosmetics table, mirror arrays, personal restroom, and private catering)",
+    "Dual Senior Event Coordinators + 4 Dedicated Ushers (Flawless guest seatings, gift registers, and schedule control)",
+    "Grand Welcome Cocktails & Unlimited Beverage Service (Bespoke menu of handcrafted hot beverages, luxury tea bar, and free-flowing soft drinks)",
+    "24/7 Security & Valet Parking Zone (Complete priority parking area under CCTV monitoring)",
+    "Cinematographic Videography & Candid Photography Session (Full coverage of the event with high-res deliverable photo-video bundle)",
+    "Complimentary First-Anniversary Romantic Candlelit Dinner (Special couple reservation suite at our elite associate restaurants)"
+  ]
+};
+
